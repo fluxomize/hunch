@@ -13,6 +13,8 @@ export interface RunOptions {
   diff: string;
   /** Select and print the tests without handing them to Playwright. */
   dryRun?: boolean;
+  /** Flags written after `--`, forwarded verbatim to `playwright test`. */
+  playwrightArgs: string[];
 }
 
 /** Wires `hunch run` into the CLI. */
@@ -20,6 +22,9 @@ export function registerRunCommand(program: Command): void {
   program
     .command('run')
     .description('Run only the tests the model expects to fail for the current changes')
+    // Declaring the variadic argument is what makes `hunch run -- --project=chromium` legal.
+    // Without it commander treats the forwarded flags as excess arguments and errors out.
+    .argument('[playwright-args...]', 'flags after -- are passed straight to playwright test')
     .option('-d, --dir <path>', 'directory holding Hunch data', DEFAULT_CONFIG.outputDir)
     .option(
       '-r, --ratio <n>',
@@ -37,7 +42,9 @@ export function registerRunCommand(program: Command): void {
     .option('--dry-run', 'print the selection without running Playwright')
     .allowUnknownOption()
     .passThroughOptions()
-    .action(run);
+    .action((playwrightArgs: string[], options: Omit<RunOptions, 'playwrightArgs'>) =>
+      run({ ...options, playwrightArgs }),
+    );
 }
 
 /**

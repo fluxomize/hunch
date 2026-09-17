@@ -51,7 +51,7 @@
     "@playwright/test": ">=1.40"
   },
   "dependencies": {
-    "commander": "^12.1.0",
+    "commander": "^15.0.0",
     "ml-logistic-regression": "^2.0.0"
   },
   "devDependencies": {
@@ -81,6 +81,8 @@
   },
   "packageManager": "pnpm@10.6.5",
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

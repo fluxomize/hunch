@@ -73,7 +73,14 @@ describe('hunch CLI', () => {
     const program = await parse(['run', '--ratio', '0.5', '--', '--project=chromium', '--headed']);
     const run = program.commands.find((command) => command.name() === 'run');
     expect(run?.opts()).toMatchObject({ ratio: 0.5 });
-    expect(run?.args).toEqual(['--project=chromium', '--headed']);
+    expect(run?.processedArgs[0]).toEqual(['--project=chromium', '--headed']);
+  });
+
+  it('accepts forwarded flags without treating them as excess arguments', async () => {
+    // commander 13 started rejecting undeclared positional arguments. `hunch run` declares a
+    // variadic argument precisely so that forwarding to Playwright stays legal.
+    await parse(['run', '--', '--grep', '@smoke']);
+    expect(stderr).not.toHaveBeenCalledWith(expect.stringContaining('too many arguments'));
   });
 
   it('tells the user the commands are not implemented yet', async () => {
