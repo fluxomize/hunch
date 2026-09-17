@@ -68,15 +68,12 @@ jobs:
       # We install with pnpm but publish with npm, because trusted publishing and provenance
       # are implemented in the npm CLI and this is the path npm supports directly.
       #
-      # npm tries OIDC first and only falls back to NODE_AUTH_TOKEN when the trusted publisher
-      # does not answer, so the token here is a fallback rather than the intended path. Once a
-      # release is seen to authenticate over OIDC, delete the NPM_TOKEN secret and this `env`
-      # block; nothing else has to change. `--provenance` is explicit because the token path
-      # does not generate attestations on its own, and it is harmless when OIDC wins.
+      # There is deliberately no NODE_AUTH_TOKEN here. Authentication happens over OIDC against
+      # the trusted publisher configured for this package on npmjs.com, so nothing long lived
+      # exists to leak or rotate, and a publish that succeeds is proof the trust is in place.
+      # Provenance is generated automatically on this path, so the flag is not needed either.
       - name: Publish
-        run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
 
       - name: Create GitHub release
         run: gh release create "$GITHUB_REF_NAME" --generate-notes

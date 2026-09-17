@@ -54,7 +54,11 @@ export function registerRunCommand(program: Command): void {
  */
 export async function run(_options: RunOptions): Promise<void> {
   process.stderr.write(
-    'hunch run is not implemented yet. This release only reserves the package name.\n',
+    'hunch run is not implemented yet.\n' +
+      'It needs a trained model, which needs `hunch train`, which needs the history the\n' +
+      'reporter collects. Adding the reporter to your Playwright config is the useful thing\n' +
+      'to do today; this command follows once there is something to predict with.\n' +
+      'Follow https://github.com/fluxomize/hunch for the release that adds this.\n',
   );
   process.exitCode = 1;
 }

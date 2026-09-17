@@ -31,7 +31,11 @@ export function registerTrainCommand(program: Command): void {
  */
 export async function train(_options: TrainOptions): Promise<void> {
   process.stderr.write(
-    'hunch train is not implemented yet. This release only reserves the package name.\n',
+    'hunch train is not implemented yet.\n' +
+      'The reporter is working though: add it to your Playwright config and it records every\n' +
+      'run to .hunch/history.jsonl. Training needs roughly 20 to 30 runs of history before it\n' +
+      'can learn anything useful, so collecting now is time well spent.\n' +
+      'Follow https://github.com/fluxomize/hunch for the release that adds this.\n',
   );
   process.exitCode = 1;
 }

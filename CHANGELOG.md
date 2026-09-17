@@ -11,6 +11,19 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Nothing yet. The training command and the smart runner are next.
 
+## [0.1.1] - 2026-09-17
+
+### Fixed
+
+- `hunch train` and `hunch run` said the release "only reserves the package name", which
+  stopped being true in 0.1.0. Anyone who tried a command would reasonably have concluded the
+  reporter did not work either. They now say what does work, and what collecting history is
+  for while the model is being built.
+
+### Changed
+
+- Releases authenticate with npm over OIDC. No publish token is stored anywhere any more.
+
 ## [0.1.0] - 2026-09-17
 
 The first release you can actually use. Hunch now collects the history that everything else
@@ -53,6 +66,7 @@ listed separately. Nothing was ever installable under that number.
 - Public API surface declared as types, with no behaviour behind it yet.
 - Package name reservation on npm.
 
-[Unreleased]: https://github.com/fluxomize/hunch/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/fluxomize/hunch/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/fluxomize/hunch/releases/tag/v0.1.1
 [0.1.0]: https://github.com/fluxomize/hunch/releases/tag/v0.1.0
 [0.0.1]: https://github.com/fluxomize/hunch/releases/tag/v0.0.1
