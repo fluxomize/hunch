@@ -18,7 +18,7 @@ jobs:
     name: Lint, typecheck, test and build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # The git helpers need a parent commit to diff against.
           fetch-depth: 0
@@ -61,7 +61,7 @@ jobs:
           - os: ubuntu-latest
             node: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
