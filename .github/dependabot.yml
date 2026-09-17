@@ -7,6 +7,17 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: chore
+    ignore:
+      # @types/node must track the oldest Node we support, not the newest that exists.
+      # Typing against a newer runtime would let us call APIs that do not exist on Node 20
+      # without the compiler saying a word. Raise this only when `engines.node` rises.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+      # TypeScript 6 fails tsup's declaration build, which injects a `baseUrl` that
+      # TypeScript 6 now rejects. Nothing in this repository can fix that. Revisit once
+      # tsup ships a release that builds declarations under TypeScript 6.
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
     directory: /
