@@ -21,7 +21,9 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Node 24 ships npm 11, which is what trusted publishing needs. The package itself
+          # still supports Node 20; this is only the machine doing the publishing.
+          node-version: 24
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
@@ -46,8 +48,10 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # We install with pnpm but publish with npm, because provenance and, later, trusted
+      # publishing are implemented in the npm CLI and this is the path npm supports directly.
       - name: Publish
-        run: pnpm publish --access public --no-git-checks --provenance
+        run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
