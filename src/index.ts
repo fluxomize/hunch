@@ -54,3 +54,21 @@ export {
 export type { HistoryIndex, Run, TestOutcome, TrainingSet } from './model/features.js';
 
 export { NotEnoughSignalError, measure, score, trainModel } from './model/train.js';
+
+export { estimateSkippedDuration, predict, selectTests } from './model/predict.js';
+export type { Candidate, Selection, SelectionOptions } from './model/predict.js';
+
+export { estimateKWh } from './metrics/energy.js';
+export { estimateCo2Grams, estimateSavings } from './metrics/carbon.js';
+export type { Savings } from './metrics/carbon.js';
+export { formatCarbon, formatDuration, formatEnergy, formatSavings } from './metrics/format.js';
+
+export {
+  PlaywrightNotFoundError,
+  escapeRegex,
+  listTests,
+  parseTestList,
+  resolvePlaywrightCli,
+  runTests,
+} from './runner/playwright.js';
+export type { DiscoveredTest } from './runner/playwright.js';

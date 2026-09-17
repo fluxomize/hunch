@@ -13,15 +13,18 @@ import { DEFAULT_CONFIG } from '../src/config.js';
  */
 describe('hunch CLI', () => {
   let stderr: MockInstance<typeof process.stderr.write>;
+  let emptyDir: string;
   const originalExitCode = process.exitCode;
 
   beforeEach(() => {
     stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    emptyDir = mkdtempSync(join(tmpdir(), 'hunch-cli-'));
   });
 
   afterEach(() => {
     stderr.mockRestore();
-    // The stub commands mark themselves as failed; do not let that leak into the test run.
+    rmSync(emptyDir, { recursive: true, force: true });
+    // The commands here are expected to bail out; do not let that leak into the test run.
     process.exitCode = originalExitCode;
   });
 
@@ -29,6 +32,20 @@ describe('hunch CLI', () => {
     const program = buildProgram();
     await program.parseAsync(['node', 'hunch', ...argv]);
     return program;
+  };
+
+  /**
+   * Parses a command against an empty data directory.
+   *
+   * Without this, `run` finds whatever `.hunch` happens to sit in the working directory and
+   * goes on to spawn Playwright, which makes a parsing test slow, and dependent on a directory
+   * that is not supposed to matter to it.
+   */
+  const parseIsolated = async (argv: string[]) => {
+    // The flag goes right after the subcommand name. Appending it would put it after any `--`,
+    // where it would become an argument for Playwright instead of one for Hunch.
+    const [command, ...rest] = argv;
+    return parse([command as string, '--dir', emptyDir, ...rest]);
   };
 
   it('builds without throwing', () => {
@@ -78,13 +95,20 @@ describe('hunch CLI', () => {
   });
 
   it('parses its own flags on run', async () => {
-    const program = await parse(['run', '--ratio', '0.5', '--min-tests', '2', '--dry-run']);
+    const program = await parseIsolated(['run', '--ratio', '0.5', '--min-tests', '2', '--dry-run']);
     const run = program.commands.find((command) => command.name() === 'run');
     expect(run?.opts()).toMatchObject({ ratio: 0.5, minTests: 2, dryRun: true });
   });
 
   it('keeps everything after -- for Playwright instead of parsing it', async () => {
-    const program = await parse(['run', '--ratio', '0.5', '--', '--project=chromium', '--headed']);
+    const program = await parseIsolated([
+      'run',
+      '--ratio',
+      '0.5',
+      '--',
+      '--project=chromium',
+      '--headed',
+    ]);
     const run = program.commands.find((command) => command.name() === 'run');
     expect(run?.opts()).toMatchObject({ ratio: 0.5 });
     expect(run?.processedArgs[0]).toEqual(['--project=chromium', '--headed']);
@@ -93,27 +117,21 @@ describe('hunch CLI', () => {
   it('accepts forwarded flags without treating them as excess arguments', async () => {
     // commander 13 started rejecting undeclared positional arguments. `hunch run` declares a
     // variadic argument precisely so that forwarding to Playwright stays legal.
-    await parse(['run', '--', '--grep', '@smoke']);
+    await parseIsolated(['run', '--', '--grep', '@smoke']);
     expect(stderr).not.toHaveBeenCalledWith(expect.stringContaining('too many arguments'));
   });
 
   it('tells the user how to start collecting when there is no history to train on', async () => {
-    // Pointed at an empty directory on purpose: the command must not read, or write, the
-    // repository's own .hunch while the suite runs.
-    const empty = mkdtempSync(join(tmpdir(), 'hunch-cli-'));
-    try {
-      await parse(['train', '--dir', empty]);
-      expect(stderr).toHaveBeenCalledWith(expect.stringContaining('No history at'));
-      expect(stderr).toHaveBeenCalledWith(expect.stringContaining('@fluxomize/hunch/reporter'));
-      expect(process.exitCode).toBe(1);
-    } finally {
-      rmSync(empty, { recursive: true, force: true });
-    }
+    await parseIsolated(['train']);
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining('No history at'));
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining('@fluxomize/hunch/reporter'));
+    expect(process.exitCode).toBe(1);
   });
 
-  it('still says the runner is not implemented yet', async () => {
-    await parse(['run']);
-    expect(stderr).toHaveBeenCalledWith(expect.stringContaining('not implemented yet'));
+  it('sends the user to train when there is no model to run with', async () => {
+    await parseIsolated(['run']);
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining('No model at'));
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining('hunch train'));
     expect(process.exitCode).toBe(1);
   });
 });

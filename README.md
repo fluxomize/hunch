@@ -12,10 +12,9 @@
   <img alt="status" src="https://img.shields.io/badge/status-pre--alpha-orange.svg">
 </p>
 
-> **Status: pre-alpha.** The reporter records history and `hunch train` builds a model from it.
-> `hunch run`, which turns predictions into a shorter test run, is still being built. Collecting
-> history now is worth doing regardless: training needs weeks of it before it can predict
-> anything.
+> **Status: beta.** All three pieces work: the reporter records history, `hunch train` builds a
+> model from it, and `hunch run` uses the model to run a subset of your suite. It has not yet
+> been used in anger on a large real-world suite, which is the next thing that has to happen.
 
 ## The problem
 
@@ -110,7 +109,47 @@ Weights, largest influence first:
 The model lands in `.hunch/model.json` as a readable list of feature names and weights. If it
 ever makes a choice you disagree with, that file is where you go to find out why.
 
-`hunch run`, which uses the model to run a subset of your suite, is the next thing being built.
+Then run only what the model thinks is worth running:
+
+```bash
+npx hunch run -- --project=chromium
+```
+
+```
+Selected 47 of 210 tests, from 3 changed file(s).
+  2 of them have no history yet and are run regardless, because nothing is known about them.
+
+  ... playwright output ...
+
+Skipped 163 test(s), historically 4m 12s of machine time.
+Estimated saving: 4.55 Wh, 2.16 gCO2eq.
+Estimates, from your own history and the documented default assumptions about runner
+power draw and grid carbon intensity. Not measurements.
+```
+
+Anything after `--` goes straight to `playwright test`. Use `--dry-run` to see the selection
+without running anything.
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `--ratio <n>` | `0.3` | Fraction of the suite to run |
+| `--min-tests <n>` | `5` | Never run fewer than this many |
+| `--diff <range>` | `HEAD~1..HEAD` | Git range used to work out what changed |
+| `--dry-run` | off | Print the selection and stop |
+
+### Two rules that keep it from being confidently wrong
+
+**A test with no history is always run.** No history means no prediction, and skipping a test
+because nothing is known about it would silently drop everything you added this week, which is
+exactly the code most likely to be broken.
+
+**When it cannot do its job, it refuses instead of guessing.** No model, no git repository, no
+tests found: it says which, and runs nothing. A selector that quietly falls back to a partial
+run is worse than one that stops, because you would believe you had been tested when you had
+not.
+
+Hunch is also complementary to Playwright's own `--last-failed`. Running that first and Hunch
+second gives you better coverage than either alone.
 
 ### What the model looks at
 

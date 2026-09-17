@@ -9,6 +9,15 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `hunch run` completes the loop. It scores the current suite against the current diff, runs
+  the tests worth running, and reports the time, energy and carbon that not running the rest
+  is estimated to have saved.
+- A test with no history is always run. Skipping a test because nothing is known about it would
+  silently drop everything added this week.
+- `hunch run --dry-run` prints the selection without running anything.
+- Energy and carbon estimates, from a documented formula with configurable assumptions about
+  runner power draw and grid carbon intensity. Reported at whatever scale keeps them legible,
+  down to microwatt hours, because a real saving printed as `0.000000 kWh` reads as a bug.
 - `hunch train` builds a model from `.hunch/history.jsonl` and writes it to `.hunch/model.json`.
   It reports precision, recall, F1 and the confusion matrix, measured on the most recent runs
   the model never trained on, and lists every feature weight so the model can be argued with.
