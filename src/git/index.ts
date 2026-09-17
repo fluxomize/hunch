@@ -35,6 +35,22 @@ export function isGitRepository(options: GitOptions = {}): boolean {
   }
 }
 
+/**
+ * Absolute path to the top of the working tree, or an empty string outside a repository.
+ *
+ * Everything Hunch records is anchored here rather than at the current working directory or at
+ * Playwright's own root. Git reports changed files relative to this directory, so test paths
+ * have to be relative to it too, or the model would be comparing paths that do not share a
+ * frame of reference.
+ */
+export function getRepositoryRoot(options: GitOptions = {}): string {
+  try {
+    return git(['rev-parse', '--show-toplevel'], options);
+  } catch {
+    return '';
+  }
+}
+
 /** Full SHA of the current commit, or an empty string outside a repository. */
 export function getCommitSha(options: GitOptions = {}): string {
   try {

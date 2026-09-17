@@ -43,6 +43,15 @@ export interface TestRecord {
   changedFiles: string[];
   /** Branch the run happened on, when it can be determined. */
   branch: string;
+  /**
+   * Attempt number, 0 for the first try.
+   *
+   * Every attempt is recorded, not just the final one, because a test that fails and then
+   * passes on retry is the definition of flaky, and learning to recognise flakiness is one of
+   * the things Hunch is for. Optional so that records written before this field existed still
+   * read cleanly.
+   */
+  retry?: number;
 }
 
 /** Options accepted by the Playwright reporter in `playwright.config.ts`. */

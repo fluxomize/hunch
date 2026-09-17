@@ -9,7 +9,21 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Nothing yet. The reporter, the training command and the smart runner are in progress.
+- The Playwright reporter now records history. Every finished test is written to
+  `.hunch/history.jsonl` at the root of the repository, with its result, duration, project,
+  commit, branch and the files that changed in that commit.
+- Retries are recorded as separate attempts, so a test that fails and then passes is visible
+  as the flaky test it is.
+- `outputDir`, `verbose` and `diffRange` options on the reporter.
+
+### Fixed
+
+- The package now ships a CommonJS build alongside the ESM one. Playwright resolves reporters
+  through CommonJS, so `@fluxomize/hunch/reporter` could not be resolved at all before, which
+  broke the first step of the setup in the README.
+- Recorded test paths are relative to the top of the git working tree, matching the paths git
+  reports for changed files. They were previously relative to Playwright's `rootDir`, which is
+  the resolved `testDir`, so the two could not be compared with each other.
 
 ## [0.0.2] - 2026-09-17
 

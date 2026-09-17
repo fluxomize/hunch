@@ -12,9 +12,10 @@
   <img alt="status" src="https://img.shields.io/badge/status-pre--alpha-orange.svg">
 </p>
 
-> **Status: pre-alpha.** The package name is reserved and the foundation is in place, but the
-> reporter, the model and the runner are still being built. Nothing here is production ready yet.
-> Watch the repo if you want to know when `0.1.0` lands.
+> **Status: pre-alpha.** The reporter works and records history today. The model and the runner
+> are still being built, so `hunch train` and `hunch run` do nothing useful yet. Collecting
+> history now is worth doing anyway, because the model needs weeks of it before it can predict
+> anything. Watch the repo if you want to know when `0.1.0` lands.
 
 ## The problem
 
@@ -47,8 +48,6 @@ or on your runner, and the data stays in your repository where you can read it.
 
 ## Quickstart
 
-> These commands will work once `0.1.0` is published. They are here so you know where this is going.
-
 ```bash
 pnpm add -D @fluxomize/hunch
 ```
@@ -64,13 +63,50 @@ export default defineConfig({
 });
 ```
 
-Run your suite normally for a few weeks. Once you have enough history (roughly 20 to 30 runs),
-train the model and let Hunch pick:
+That is the whole setup. Run your suite the way you always do, and Hunch writes one line per
+test per run into `.hunch/history.jsonl` at the root of your repository:
+
+```json
+{
+  "testId": "tests/login.spec.ts > login > signs in",
+  "file": "tests/login.spec.ts",
+  "project": "chromium",
+  "duration": 1243,
+  "status": "passed",
+  "timestamp": "2026-09-17T05:11:47.998Z",
+  "commitSha": "390f1c2e66160f62d0a8d75d56da77be15d38dde",
+  "changedFiles": ["src/login.ts"],
+  "branch": "main",
+  "retry": 0
+}
+```
+
+Commit that file. It is the training data, it is meant to be shared with your team, and it is
+plain text you can read, grep and diff.
+
+Then, once the model exists and you have enough history (roughly 20 to 30 runs):
 
 ```bash
 npx hunch train
 npx hunch run -- --project=chromium
 ```
+
+### Reporter options
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `outputDir` | `.hunch` | Where to write, relative to the repository root |
+| `verbose` | `false` | Print what the reporter is doing. Off by default, so normal runs stay quiet |
+| `diffRange` | `HEAD~1..HEAD` | Git revision range used to work out which files changed |
+
+On CI you usually want `diffRange` to cover the whole pull request rather than the last commit:
+
+```typescript
+reporter: [['list'], ['@fluxomize/hunch/reporter', { diffRange: 'origin/main...HEAD' }]];
+```
+
+The reporter is built so it can never fail your suite. Outside a git repository, or if anything
+it touches goes wrong, it prints a warning and records nothing.
 
 ## Why energy matters here
 

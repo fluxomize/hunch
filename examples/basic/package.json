@@ -1,0 +1,15 @@
+{
+  "name": "hunch-example-basic",
+  "private": true,
+  "type": "module",
+  "description": "Smallest Playwright project wired up to the Hunch reporter.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "dependencies": {
+    "@fluxomize/hunch": "link:../.."
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
+  }
+}

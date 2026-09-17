@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -7,6 +7,7 @@ import {
   getBranch,
   getChangedFiles,
   getCommitSha,
+  getRepositoryRoot,
   getUncommittedFiles,
   isGitRepository,
 } from '../src/git/index.js';
@@ -63,6 +64,21 @@ describe('git helpers', () => {
     expect(getBranch({ cwd: repo })).toBe('main');
   });
 
+  it('finds the top of the working tree from a subdirectory', () => {
+    // Everything Hunch writes is anchored at this path, and Playwright may run git from a
+    // nested testDir, so resolving it from below has to give the same answer.
+    const nested = join(repo, 'deep', 'nested');
+    mkdirSync(nested, { recursive: true });
+
+    // git prints the path with forward slashes and resolves symlinks, which matters because
+    // the system temp directory is a symlink on macOS.
+    const normalise = (path: string): string => realpathSync(path).split('\\').join('/');
+    const expected = normalise(repo);
+
+    expect(normalise(getRepositoryRoot({ cwd: repo }))).toBe(expected);
+    expect(normalise(getRepositoryRoot({ cwd: nested }))).toBe(expected);
+  });
+
   it('falls back to the files of the commit when HEAD has no parent', () => {
     expect(getChangedFiles('HEAD~1..HEAD', { cwd: repo })).toEqual(['first.txt']);
   });
@@ -83,6 +99,7 @@ describe('git helpers', () => {
     try {
       expect(getCommitSha({ cwd: plain })).toBe('');
       expect(getBranch({ cwd: plain })).toBe('');
+      expect(getRepositoryRoot({ cwd: plain })).toBe('');
       expect(getChangedFiles('HEAD~1..HEAD', { cwd: plain })).toEqual([]);
       expect(getUncommittedFiles({ cwd: plain })).toEqual([]);
     } finally {

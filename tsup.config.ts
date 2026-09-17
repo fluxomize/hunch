@@ -6,7 +6,10 @@ export default defineConfig({
     'reporter/index': 'src/reporter/index.ts',
     'cli/index': 'src/cli/index.ts',
   },
-  format: ['esm'],
+  // Both formats on purpose. Playwright resolves a reporter through CommonJS machinery, so an
+  // ESM only package fails to resolve `@fluxomize/hunch/reporter` at all, which is the very
+  // first thing a user configures. The CJS output exists to make that integration work.
+  format: ['esm', 'cjs'],
   target: 'node20',
   platform: 'node',
   dts: true,

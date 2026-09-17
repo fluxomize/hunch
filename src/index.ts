@@ -34,3 +34,8 @@ export {
   getUncommittedFiles,
   isGitRepository,
 } from './git/index.js';
+
+export { appendRecords, readRecords } from './storage/jsonl.js';
+
+export { buildTestId, Collector, toRecord } from './reporter/collector.js';
+export type { FinishedTest, RunContext } from './reporter/collector.js';
