@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, dirname, join, resolve } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { resolveDataDir } from '../src/cli/data-dir.js';
 
@@ -50,18 +50,19 @@ describe('resolving where Hunch data lives', () => {
   it('resolves an explicit --dir against the working directory', () => {
     // What somebody typing a relative path at a prompt means by it.
     process.chdir(nested);
-    expect(resolveDataDir('local-data')).toBe(resolve(nested, 'local-data'));
+    expect(normalise(resolveDataDir('local-data'))).toBe(normalise(join(nested, 'local-data')));
   });
 
   it('accepts an absolute --dir unchanged', () => {
     process.chdir(repo);
-    const absolute = join(repo, 'elsewhere');
-    expect(resolveDataDir(absolute)).toBe(resolve(absolute));
+    expect(normalise(resolveDataDir(join(repo, 'elsewhere')))).toBe(
+      normalise(join(repo, 'elsewhere')),
+    );
   });
 
   it('prefers a repository root it is handed over looking one up', () => {
     process.chdir(nested);
-    expect(resolveDataDir(undefined, repo)).toBe(resolve(repo, '.hunch'));
+    expect(normalise(resolveDataDir(undefined, repo))).toBe(normalise(join(repo, '.hunch')));
   });
 
   it('falls back to the working directory outside a repository', () => {
