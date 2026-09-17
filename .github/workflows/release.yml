@@ -19,7 +19,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           # Node 24 ships npm 11, which is what trusted publishing needs. The package itself
           # still supports Node 20; this is only the machine doing the publishing.
