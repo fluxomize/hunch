@@ -1,0 +1,36 @@
+/**
+ * Public API of `@fluxomize/hunch`.
+ *
+ * The Playwright reporter is published separately under `@fluxomize/hunch/reporter`, because
+ * Playwright loads reporters by module path and expects a default export.
+ */
+
+export type {
+  FeatureVector,
+  HunchConfig,
+  HunchModel,
+  ModelMetrics,
+  Prediction,
+  ReporterOptions,
+  RunSummary,
+  SustainabilityConfig,
+  TestRecord,
+  TestStatus,
+} from './types.js';
+
+export {
+  DEFAULT_CONFIG,
+  DEFAULT_GRID_INTENSITY,
+  DEFAULT_RUNNER_WATTS,
+  HISTORY_FILE,
+  HUNCH_DIR,
+  MODEL_FILE,
+} from './config.js';
+
+export {
+  getBranch,
+  getChangedFiles,
+  getCommitSha,
+  getUncommittedFiles,
+  isGitRepository,
+} from './git/index.js';

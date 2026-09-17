@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Test output
+coverage/
+test-results/
+playwright-report/
+
+# Hunch data generated while dogfooding
+.hunch/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and env
+*.log
+npm-debug.log*
+.env
+.env.local
+
+# Internal planning notes (not part of the published project)
+hunch-handoff.md
