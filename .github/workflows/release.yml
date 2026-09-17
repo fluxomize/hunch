@@ -53,12 +53,14 @@ jobs:
       - name: Build
         run: pnpm build
 
-      # We install with pnpm but publish with npm, because provenance and, later, trusted
-      # publishing are implemented in the npm CLI and this is the path npm supports directly.
+      # We install with pnpm but publish with npm, because trusted publishing and provenance
+      # are implemented in the npm CLI and this is the path npm supports directly.
+      #
+      # There is deliberately no NODE_AUTH_TOKEN here. Authentication happens over OIDC
+      # against the trusted publisher configured for this package, so no long lived
+      # credential exists to leak, and provenance is generated automatically.
       - name: Publish
-        run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
 
       - name: Create GitHub release
         run: gh release create "$GITHUB_REF_NAME" --generate-notes

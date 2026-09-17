@@ -1,6 +1,6 @@
 {
   "name": "@fluxomize/hunch",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Playwright's smart hunch about which tests to run. Predictive test selection with ML to cut CI time and carbon footprint.",
   "keywords": [
     "playwright",
