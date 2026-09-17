@@ -65,7 +65,8 @@
   },
   "dependencies": {
     "commander": "^15.0.0",
-    "ml-logistic-regression": "^2.0.0"
+    "ml-logistic-regression": "^2.0.0",
+    "ml-matrix": "^6.15.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

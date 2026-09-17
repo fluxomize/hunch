@@ -32,6 +32,8 @@ export interface RunContext {
   commitSha: string;
   branch: string;
   changedFiles: string[];
+  /** Identifies this run, so training can tell two runs of the same commit apart. */
+  runId: string;
 }
 
 /** Playwright statuses that say something about the test, mapped to what we store. */
@@ -77,6 +79,7 @@ export function toRecord(test: FinishedTest, context: RunContext, now: Date): Te
     commitSha: context.commitSha,
     changedFiles: context.changedFiles,
     branch: context.branch,
+    runId: context.runId,
     retry: test.retry,
   };
 }

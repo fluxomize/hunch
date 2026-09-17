@@ -10,6 +10,7 @@ const context: RunContext = {
   commitSha: 'c'.repeat(40),
   branch: 'main',
   changedFiles: ['src/login.ts'],
+  runId: 'run-1',
 };
 
 const finished = (overrides: Partial<FinishedTest> = {}): FinishedTest => ({
@@ -61,8 +62,14 @@ describe('toRecord', () => {
       commitSha: 'c'.repeat(40),
       changedFiles: ['src/login.ts'],
       branch: 'main',
+      runId: 'run-1',
       retry: 0,
     });
+  });
+
+  it('stamps every record with the run it belongs to', () => {
+    // Training groups records by this, so two runs of the same commit stay distinguishable.
+    expect(toRecord(finished(), context, NOW)?.runId).toBe('run-1');
   });
 
   it.each(['passed', 'failed', 'skipped', 'timedOut'] as const)('stores %s', (status) => {

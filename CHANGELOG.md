@@ -9,7 +9,20 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Nothing yet. The training command and the smart runner are next.
+- `hunch train` builds a model from `.hunch/history.jsonl` and writes it to `.hunch/model.json`.
+  It reports precision, recall, F1 and the confusion matrix, measured on the most recent runs
+  the model never trained on, and lists every feature weight so the model can be argued with.
+- Twelve features, including how often a test failed when these exact files changed before,
+  which is the signal static dependency analysis cannot provide.
+- Records carry a `runId`, so two runs of the same commit stay distinguishable. Grouping by
+  commit alone hid exactly the case where flakiness shows up. Histories written before this
+  field existed still group by commit.
+
+### Notes
+
+- The baseline regression has no regularisation, so features measuring similar things can take
+  large opposing weights. Ranking is unaffected; reading one weight in isolation is not
+  meaningful. This is documented in the README rather than hidden.
 
 ## [0.1.1] - 2026-09-17
 

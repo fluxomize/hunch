@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { join, relative } from 'node:path';
 import type { FullConfig, Reporter, Suite, TestCase, TestResult } from '@playwright/test/reporter';
 import { HISTORY_FILE, HUNCH_DIR } from '../config.js';
@@ -49,6 +50,7 @@ export default class HunchReporter implements Reporter {
         commitSha: getCommitSha({ cwd }),
         branch: getBranch({ cwd }),
         changedFiles: getChangedFiles(this.options.diffRange ?? 'HEAD~1..HEAD', { cwd }),
+        runId: randomUUID(),
       };
 
       const outputDir = this.options.outputDir ?? HUNCH_DIR;

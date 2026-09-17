@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { MockInstance } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildProgram } from '../src/cli/program.js';
@@ -43,19 +46,30 @@ describe('hunch CLI', () => {
     expect(buildProgram().version()).toMatch(/^\d+\.\d+\.\d+/);
   });
 
-  it('applies the documented defaults to train', async () => {
-    const program = await parse(['train']);
-    const train = program.commands.find((command) => command.name() === 'train');
-    expect(train?.opts()).toMatchObject({
+  /**
+   * Reads the declared defaults without running the command.
+   *
+   * `train` now reads history and writes a model, so parsing it just to inspect its options
+   * would let a unit test touch the repository's own `.hunch` directory.
+   */
+  const declaredDefaults = (commandName: string): Record<string, unknown> => {
+    const command = buildProgram().commands.find((each) => each.name() === commandName);
+    const defaults: Record<string, unknown> = {};
+    for (const option of command?.options ?? []) {
+      defaults[option.attributeName()] = option.defaultValue;
+    }
+    return defaults;
+  };
+
+  it('applies the documented defaults to train', () => {
+    expect(declaredDefaults('train')).toMatchObject({
       dir: DEFAULT_CONFIG.outputDir,
       minRuns: DEFAULT_CONFIG.minRunsToTrain,
     });
   });
 
-  it('applies the documented defaults to run', async () => {
-    const program = await parse(['run']);
-    const run = program.commands.find((command) => command.name() === 'run');
-    expect(run?.opts()).toMatchObject({
+  it('applies the documented defaults to run', () => {
+    expect(declaredDefaults('run')).toMatchObject({
       dir: DEFAULT_CONFIG.outputDir,
       ratio: DEFAULT_CONFIG.selectionRatio,
       minTests: DEFAULT_CONFIG.minTests,
@@ -83,8 +97,22 @@ describe('hunch CLI', () => {
     expect(stderr).not.toHaveBeenCalledWith(expect.stringContaining('too many arguments'));
   });
 
-  it('tells the user the commands are not implemented yet', async () => {
-    await parse(['train']);
+  it('tells the user how to start collecting when there is no history to train on', async () => {
+    // Pointed at an empty directory on purpose: the command must not read, or write, the
+    // repository's own .hunch while the suite runs.
+    const empty = mkdtempSync(join(tmpdir(), 'hunch-cli-'));
+    try {
+      await parse(['train', '--dir', empty]);
+      expect(stderr).toHaveBeenCalledWith(expect.stringContaining('No history at'));
+      expect(stderr).toHaveBeenCalledWith(expect.stringContaining('@fluxomize/hunch/reporter'));
+      expect(process.exitCode).toBe(1);
+    } finally {
+      rmSync(empty, { recursive: true, force: true });
+    }
+  });
+
+  it('still says the runner is not implemented yet', async () => {
+    await parse(['run']);
     expect(stderr).toHaveBeenCalledWith(expect.stringContaining('not implemented yet'));
     expect(process.exitCode).toBe(1);
   });

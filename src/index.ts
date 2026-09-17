@@ -39,3 +39,18 @@ export { appendRecords, readRecords } from './storage/jsonl.js';
 
 export { buildTestId, Collector, toRecord } from './reporter/collector.js';
 export type { FinishedTest, RunContext } from './reporter/collector.js';
+
+export { InvalidModelError, readModel, writeModel } from './storage/model.js';
+
+export {
+  FEATURE_NAMES,
+  advanceIndex,
+  buildIndex,
+  buildTrainingSet,
+  createIndex,
+  extractFeatures,
+  groupIntoRuns,
+} from './model/features.js';
+export type { HistoryIndex, Run, TestOutcome, TrainingSet } from './model/features.js';
+
+export { NotEnoughSignalError, measure, score, trainModel } from './model/train.js';

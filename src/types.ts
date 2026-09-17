@@ -37,6 +37,15 @@ export interface TestRecord {
   /** Full SHA of the commit the run was executed against. */
   commitSha: string;
   /**
+   * Identifier for the whole run this record belongs to.
+   *
+   * Training walks history one run at a time, so runs have to be distinguishable. The commit
+   * alone cannot do it: re-running the same commit is routine, and it is exactly the case
+   * where flakiness shows up, so collapsing those runs together would hide the signal. Optional
+   * because histories recorded before this field existed only have the commit to group by.
+   */
+  runId?: string;
+  /**
    * Files changed in the commit or commit range under test, relative to the repository root.
    * This is the signal the model learns to associate with failures.
    */
@@ -81,12 +90,16 @@ export interface HunchModel {
   schemaVersion: 1;
   /** Which algorithm produced this model. Only logistic regression exists in v0.1. */
   algorithm: 'logistic-regression';
-  /** Names of the features, in the same order as every `FeatureVector.values`. */
+  /**
+   * Names of the features, in the same order as `weights` and as every `FeatureVector.values`.
+   *
+   * The first feature is always `bias` and is always 1. The regression underneath fits no
+   * intercept of its own, so the bias is carried as an ordinary feature; that keeps the model
+   * file readable as a single list of name and weight pairs, with nothing hidden beside it.
+   */
   featureNames: string[];
-  /** Learned weights, one per feature, plus the intercept. */
+  /** Learned weight for each feature, aligned with `featureNames`. */
   weights: number[];
-  /** Intercept term of the regression. */
-  intercept: number;
   /** When the model was trained, as an ISO 8601 timestamp. */
   trainedAt: string;
   /** How many records from the history file went into training. */

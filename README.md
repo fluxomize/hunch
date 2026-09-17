@@ -12,10 +12,10 @@
   <img alt="status" src="https://img.shields.io/badge/status-pre--alpha-orange.svg">
 </p>
 
-> **Status: pre-alpha.** The reporter works and records history today. The model and the runner
-> are still being built, so `hunch train` and `hunch run` do nothing useful yet. Collecting
-> history now is worth doing anyway, because the model needs weeks of it before it can predict
-> anything. Watch the repo if you want to know when `0.1.0` lands.
+> **Status: pre-alpha.** The reporter records history and `hunch train` builds a model from it.
+> `hunch run`, which turns predictions into a shorter test run, is still being built. Collecting
+> history now is worth doing regardless: training needs weeks of it before it can predict
+> anything.
 
 ## The problem
 
@@ -84,12 +84,60 @@ test per run into `.hunch/history.jsonl` at the root of your repository:
 Commit that file. It is the training data, it is meant to be shared with your team, and it is
 plain text you can read, grep and diff.
 
-Then, once the model exists and you have enough history (roughly 20 to 30 runs):
+Once you have around 20 to 30 runs of history, train a model from it:
 
 ```bash
 npx hunch train
-npx hunch run -- --project=chromium
 ```
+
+It tells you what it learned and how well, measured on runs it never saw:
+
+```
+Trained on 40 runs, 195 examples.
+
+Quality at the usual 50% cutoff, measured on the most recent runs the model never saw.
+  precision  100.0%  of the tests it flags, this many really fail
+  recall      53.3%  of the tests that fail, this many get flagged
+  F1          69.6%
+
+Weights, largest influence first:
+  -5.751  recentFailureRate
+  +5.032  coChangeFailureRate
+  +2.739  changesetSize
+  ...
+```
+
+The model lands in `.hunch/model.json` as a readable list of feature names and weights. If it
+ever makes a choice you disagree with, that file is where you go to find out why.
+
+`hunch run`, which uses the model to run a subset of your suite, is the next thing being built.
+
+### What the model looks at
+
+Twelve features, all of them plain numbers you can inspect:
+
+| Feature | What it captures |
+| --- | --- |
+| `failureRate`, `recentFailureRate` | How often this test fails, overall and lately |
+| `observationConfidence` | How much history stands behind those rates |
+| `failureRecency` | How long ago it last failed |
+| `flakyRate` | How often it fails and then passes on retry |
+| `durationWeight` | How slow it is |
+| `coChangeFailureRate`, `coChangeSupport` | **How often it failed when these exact files changed before** |
+| `ownFileChanged` | Whether the test's own file is in the diff |
+| `pathAffinity` | How close the test sits to the changed files in the tree |
+| `changesetSize` | How big the change is |
+
+The two in bold are the reason this project exists. They are what a dependency graph cannot
+tell you: not what *could* break, but what *has* broken, for this change, before.
+
+### Known limitations
+
+The baseline model has no regularisation. With a dozen features and the twenty to thirty runs
+this is designed for, features that measure similar things can end up with large opposing
+weights. The model still ranks tests sensibly, but do not read a single weight as if it were
+an independent finding. Quality is always reported on held out runs, so the numbers you see
+are not the model grading its own homework.
 
 ### Reporter options
 
