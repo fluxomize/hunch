@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import type { Command } from 'commander';
 import { DEFAULT_CONFIG, HISTORY_FILE, MODEL_FILE } from '../config.js';
+import { resolveDataDir } from './data-dir.js';
 import { buildTrainingSet, groupIntoRuns } from '../model/features.js';
 import { NotEnoughSignalError, trainModel } from '../model/train.js';
 import { readRecords } from '../storage/jsonl.js';
@@ -9,8 +10,8 @@ import type { HunchModel } from '../types.js';
 
 /** Options accepted by `hunch train`. */
 export interface TrainOptions {
-  /** Directory holding the history file and receiving the model. */
-  dir: string;
+  /** Directory holding the history file and receiving the model, if given explicitly. */
+  dir?: string;
   /** Refuse to train with fewer historical runs than this. */
   minRuns: number;
 }
@@ -20,7 +21,10 @@ export function registerTrainCommand(program: Command): void {
   program
     .command('train')
     .description('Train the failure prediction model from .hunch/history.jsonl')
-    .option('-d, --dir <path>', 'directory holding Hunch data', DEFAULT_CONFIG.outputDir)
+    .option(
+      '-d, --dir <path>',
+      `directory holding Hunch data (default: ${DEFAULT_CONFIG.outputDir} at the repository root)`,
+    )
     .option(
       '--min-runs <n>',
       'minimum number of historical runs required to train',
@@ -38,8 +42,9 @@ export function registerTrainCommand(program: Command): void {
  * honest answer early on is usually "keep running your tests for another week".
  */
 export async function train(options: TrainOptions): Promise<void> {
-  const historyPath = join(options.dir, HISTORY_FILE);
-  const modelPath = join(options.dir, MODEL_FILE);
+  const dir = resolveDataDir(options.dir);
+  const historyPath = join(dir, HISTORY_FILE);
+  const modelPath = join(dir, MODEL_FILE);
 
   const records = readRecords(historyPath);
   if (records.length === 0) {

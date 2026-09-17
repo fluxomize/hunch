@@ -18,6 +18,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Energy and carbon estimates, from a documented formula with configurable assumptions about
   runner power draw and grid carbon intensity. Reported at whatever scale keeps them legible,
   down to microwatt hours, because a real saving printed as `0.000000 kWh` reads as a bug.
+- `hunch train` and `hunch run` find `.hunch` at the top of the git working tree, the same
+  place the reporter writes it, rather than in whatever directory they happen to be run from.
+  Running either from a workspace package used to report an empty history. An explicit
+  `--dir` is still resolved against the working directory.
 - `hunch train` builds a model from `.hunch/history.jsonl` and writes it to `.hunch/model.json`.
   It reports precision, recall, F1 and the confusion matrix, measured on the most recent runs
   the model never trained on, and lists every feature weight so the model can be argued with.

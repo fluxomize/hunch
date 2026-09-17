@@ -6,6 +6,7 @@ import { buildIndex } from '../model/features.js';
 import { estimateSkippedDuration, predict, selectTests } from '../model/predict.js';
 import { estimateSavings } from '../metrics/carbon.js';
 import { formatCarbon, formatDuration, formatEnergy } from '../metrics/format.js';
+import { resolveDataDir } from './data-dir.js';
 import { readRecords } from '../storage/jsonl.js';
 import { InvalidModelError, readModel } from '../storage/model.js';
 import {
@@ -18,8 +19,8 @@ import {
 
 /** Options accepted by `hunch run`. */
 export interface RunOptions {
-  /** Directory holding the model and the history file. */
-  dir: string;
+  /** Directory holding the model and the history file, if given explicitly. */
+  dir?: string;
   /** Fraction of the suite to run, between 0 and 1. */
   ratio: number;
   /** Floor on the number of selected tests, whatever the ratio works out to. */
@@ -40,7 +41,10 @@ export function registerRunCommand(program: Command): void {
     // Declaring the variadic argument is what makes `hunch run -- --project=chromium` legal.
     // Without it commander treats the forwarded flags as excess arguments and errors out.
     .argument('[playwright-args...]', 'flags after -- are passed straight to playwright test')
-    .option('-d, --dir <path>', 'directory holding Hunch data', DEFAULT_CONFIG.outputDir)
+    .option(
+      '-d, --dir <path>',
+      `directory holding Hunch data (default: ${DEFAULT_CONFIG.outputDir} at the repository root)`,
+    )
     .option(
       '-r, --ratio <n>',
       'fraction of the suite to run, between 0 and 1',
@@ -77,12 +81,13 @@ export async function run(options: RunOptions): Promise<void> {
   }
   const repoRoot = getRepositoryRoot({ cwd }) || cwd;
 
-  const model = loadModel(join(options.dir, MODEL_FILE));
+  const dir = resolveDataDir(options.dir, repoRoot);
+  const model = loadModel(join(dir, MODEL_FILE));
   if (!model) {
     return;
   }
 
-  const records = readRecords(join(options.dir, HISTORY_FILE));
+  const records = readRecords(join(dir, HISTORY_FILE));
   const index = buildIndex(records);
   const changedFiles = getChangedFiles(options.diff, { cwd });
 

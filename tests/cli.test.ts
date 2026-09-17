@@ -80,18 +80,24 @@ describe('hunch CLI', () => {
 
   it('applies the documented defaults to train', () => {
     expect(declaredDefaults('train')).toMatchObject({
-      dir: DEFAULT_CONFIG.outputDir,
       minRuns: DEFAULT_CONFIG.minRunsToTrain,
     });
   });
 
   it('applies the documented defaults to run', () => {
     expect(declaredDefaults('run')).toMatchObject({
-      dir: DEFAULT_CONFIG.outputDir,
       ratio: DEFAULT_CONFIG.selectionRatio,
       minTests: DEFAULT_CONFIG.minTests,
       diff: 'HEAD~1..HEAD',
     });
+  });
+
+  it('describes where its data lives by default, since there is no literal default', () => {
+    // The directory is resolved against the repository root at run time, so the help text has
+    // to carry what the option object cannot.
+    const run = buildProgram().commands.find((each) => each.name() === 'run');
+    const dir = run?.options.find((option) => option.attributeName() === 'dir');
+    expect(dir?.description).toContain('repository root');
   });
 
   it('parses its own flags on run', async () => {
