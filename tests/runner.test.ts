@@ -4,7 +4,9 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   PlaywrightNotFoundError,
+  buildRunArgs,
   escapeRegex,
+  grepWasDropped,
   listTests,
   parseTestList,
   resolvePlaywrightCli,
@@ -122,5 +124,70 @@ describe('finding the Playwright CLI', () => {
     } finally {
       rmSync(empty, { recursive: true, force: true });
     }
+  });
+});
+
+describe('building the arguments for a selection', () => {
+  const test = (file: string, ...titlePath: string[]) => ({
+    testId: [file, ...titlePath].join(' > '),
+    file,
+    titlePath,
+  });
+
+  const args = (tests: ReturnType<typeof test>[]): string[] =>
+    buildRunArgs({ cwd: '/repo', repoRoot: '/repo', tests });
+
+  it('passes each file once, however many of its tests were selected', () => {
+    const built = args([
+      test('tests/a.spec.ts', 'one'),
+      test('tests/a.spec.ts', 'two'),
+      test('tests/b.spec.ts', 'three'),
+    ]);
+    expect(built.filter((arg) => arg.endsWith('.spec.ts'))).toEqual([
+      'tests/a.spec.ts',
+      'tests/b.spec.ts',
+    ]);
+  });
+
+  it('anchors each title so a short one does not drag in a longer one', () => {
+    // Without the anchor, selecting "logs in" would also run "logs in with a saved password".
+    const built = args([test('a.spec.ts', 'logs in')]);
+    const pattern = built[built.indexOf('--grep') + 1] as string;
+    expect(new RegExp(pattern).test('chromium a.spec.ts logs in')).toBe(true);
+    expect(new RegExp(pattern).test('chromium a.spec.ts logs in with a saved password')).toBe(
+      false,
+    );
+  });
+
+  it('matches a test nested in describe blocks', () => {
+    const built = args([test('a.spec.ts', 'auth', 'logs in')]);
+    const pattern = built[built.indexOf('--grep') + 1] as string;
+    expect(new RegExp(pattern).test('chromium a.spec.ts auth logs in')).toBe(true);
+  });
+
+  it('escapes a title that would otherwise be a pattern', () => {
+    const built = args([test('a.spec.ts', 'costs $5 (roughly)')]);
+    const pattern = built[built.indexOf('--grep') + 1] as string;
+    expect(new RegExp(pattern).test('chromium a.spec.ts costs $5 (roughly)')).toBe(true);
+  });
+
+  it('falls back to whole files when the title filter would be too long', () => {
+    // Windows caps a command line near 32,000 characters. Failing with an unreadable spawn
+    // error would be worse than running a few more tests than asked for.
+    const many = Array.from({ length: 500 }, (_, index) =>
+      test('a.spec.ts', `a fairly long test title number ${index}`),
+    );
+    expect(args(many)).not.toContain('--grep');
+    expect(grepWasDropped(many)).toBe(true);
+    expect(grepWasDropped([test('a.spec.ts', 'one')])).toBe(false);
+  });
+
+  it('writes file paths relative to where Playwright will run', () => {
+    const built = buildRunArgs({
+      cwd: '/repo/packages/web',
+      repoRoot: '/repo',
+      tests: [test('packages/web/tests/a.spec.ts', 'one')],
+    });
+    expect(built).toContain('tests/a.spec.ts');
   });
 });

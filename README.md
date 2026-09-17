@@ -130,6 +130,38 @@ power draw and grid carbon intensity. Not measurements.
 Anything after `--` goes straight to `playwright test`. Use `--dry-run` to see the selection
 without running anything.
 
+### While you wait
+
+Training needs weeks of history, and a tool that says nothing for weeks is indistinguishable
+from a broken one. `hunch stats` answers the two questions you actually have during that time:
+
+```bash
+npx hunch stats
+```
+
+```
+History: 42 runs, 210 tests, 8820 records.
+  Collected from 2026-08-04 to 2026-09-17.
+  Enough history to train. Run `hunch train`.
+
+Fails most often:
+    31%  tests/checkout.spec.ts > checkout > applies a discount code
+    12%  tests/auth.spec.ts > auth > signs in with SSO
+
+Flakiest:
+    18%  tests/search.spec.ts > search > shows suggestions
+
+Slowest:
+    14.2s  tests/checkout.spec.ts > checkout > completes an order
+
+Model: trained 2026-09-17 on 6300 examples.
+  precision 81.0%, recall 74.2%, F1 77.4%
+  Strongest signals: coChangeFailureRate +4.21, failureRate +2.05, flakyRate -1.88
+```
+
+That ranking is useful on its own, before any prediction happens. The flakiest list in
+particular is usually a to-do list somebody has been meaning to write down.
+
 | Option | Default | What it does |
 | --- | --- | --- |
 | `--ratio <n>` | `0.3` | Fraction of the suite to run |
@@ -150,6 +182,39 @@ not.
 
 Hunch is also complementary to Playwright's own `--last-failed`. Running that first and Hunch
 second gives you better coverage than either alone.
+
+## Configuration
+
+Optional. Put `hunch.config.json` at the top of your repository, next to `playwright.config.ts`:
+
+```json
+{
+  "selectionRatio": 0.3,
+  "minTests": 5,
+  "minRunsToTrain": 20,
+  "sustainability": {
+    "runnerWatts": 65,
+    "gridIntensity": 475
+  }
+}
+```
+
+Everything is optional and anything you leave out keeps its default. A command line flag beats
+the file, and the file beats the defaults.
+
+**The sustainability numbers are the ones worth setting.** They are assumptions about hardware
+Hunch has never seen. 65 W is a rough figure for a GitHub hosted runner, and 475 gCO₂eq/kWh is
+a global average, which is the right shape of guess when the runner's location is unknown. A
+self hosted runner in Brazil sits closer to 85 gCO₂eq/kWh because the grid is mostly
+hydroelectric; the same suite is genuinely cleaner there, and Hunch has no way to know that on
+its own. `hunch run` prints the values it used, so what you see is always what it assumed.
+
+## On CI
+
+Two ready to copy workflows live in [`examples/github-actions`](./examples/github-actions):
+one that runs the full suite on `main` and collects history, and one that runs Hunch's
+selection on pull requests. The README there covers the two things people get wrong, both of
+which silently produce a useless model rather than an error.
 
 ### What the model looks at
 

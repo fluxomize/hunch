@@ -1,0 +1,44 @@
+# Running only the tests worth running on a pull request.
+#
+# This is where the time is saved. It uses the model your main branch already trained, so it
+# does nothing useful until the collecting workflow has been running for a few weeks.
+#
+# Copy this to .github/workflows/hunch-pr.yml
+
+name: Tests
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Hunch compares the branch against main, so main has to be in the clone.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps
+
+      - name: Run the tests Hunch picks
+        # `origin/main...HEAD` is every file this pull request touches, rather than only the
+        # files in its last commit.
+        run: npx hunch run --diff origin/main...HEAD
+
+# A safer first month: run Hunch's selection and the full suite side by side, and compare. If
+# Hunch ever misses a failure the full suite catches, you will see it before you have started
+# trusting the selection.
+#
+#   - name: What Hunch would have picked
+#     run: npx hunch run --dry-run --diff origin/main...HEAD
+#
+#   - name: Every test
+#     run: npx playwright test

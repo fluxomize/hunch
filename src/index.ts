@@ -42,6 +42,9 @@ export type { FinishedTest, RunContext } from './reporter/collector.js';
 
 export { InvalidModelError, readModel, writeModel } from './storage/model.js';
 
+export { CONFIG_FILE, InvalidConfigError, readUserConfig, resolveConfig } from './user-config.js';
+export type { ConfigOverrides, UserConfig } from './user-config.js';
+
 export {
   FEATURE_NAMES,
   advanceIndex,
@@ -65,7 +68,9 @@ export { formatCarbon, formatDuration, formatEnergy, formatSavings } from './met
 
 export {
   PlaywrightNotFoundError,
+  buildRunArgs,
   escapeRegex,
+  grepWasDropped,
   listTests,
   parseTestList,
   resolvePlaywrightCli,

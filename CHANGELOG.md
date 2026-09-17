@@ -9,6 +9,26 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Nothing yet.
+
+## [0.2.0] - 2026-09-17
+
+The MVP, complete. Hunch now collects history, learns from it, and uses what it learned to run
+a shorter suite.
+
+### Added
+
+- `hunch stats` shows what has been collected, how many more runs before training will work,
+  which tests fail most, which are flakiest and which are slowest, plus the current model's
+  quality. Most of somebody's first month with Hunch is spent waiting for history, and a tool
+  that says nothing for weeks is indistinguishable from a broken one.
+- `hunch.config.json` at the top of the repository. The README described the runner power draw
+  and grid carbon intensity as assumptions the user can replace, which was not true of anything
+  before this: there was no flag and no file. `--watts` and `--grid-intensity` were added
+  alongside it, and `hunch run` now prints the values it used.
+- Two ready to copy GitHub Actions workflows under `examples/github-actions`, covering history
+  collection on the main branch and selection on pull requests, with the two mistakes that
+  silently produce a useless model called out.
 - `hunch run` completes the loop. It scores the current suite against the current diff, runs
   the tests worth running, and reports the time, energy and carbon that not running the rest
   is estimated to have saved.
@@ -30,6 +50,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Records carry a `runId`, so two runs of the same commit stay distinguishable. Grouping by
   commit alone hid exactly the case where flakiness shows up. Histories written before this
   field existed still group by commit.
+
+### Changed
+
+- Test coverage is now enforced at 85% and sits at 90%. The previous configuration excluded
+  every `index.ts`, which hid the fact that the Playwright reporter, the code that runs on
+  every test of every run, had no unit tests at all. It now has twelve.
 
 ### Notes
 
@@ -92,7 +118,8 @@ listed separately. Nothing was ever installable under that number.
 - Public API surface declared as types, with no behaviour behind it yet.
 - Package name reservation on npm.
 
-[Unreleased]: https://github.com/fluxomize/hunch/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/fluxomize/hunch/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/fluxomize/hunch/releases/tag/v0.2.0
 [0.1.1]: https://github.com/fluxomize/hunch/releases/tag/v0.1.1
 [0.1.0]: https://github.com/fluxomize/hunch/releases/tag/v0.1.0
 [0.0.1]: https://github.com/fluxomize/hunch/releases/tag/v0.0.1

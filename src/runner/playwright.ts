@@ -139,12 +139,7 @@ export interface RunOptions extends PlaywrightOptions {
  */
 export function runTests(options: RunOptions): number {
   const cli = resolvePlaywrightCli(options.cwd);
-  const files = [...new Set(options.tests.map((test) => test.file))];
-  const args = [
-    'test',
-    ...files.map((file) => toCliPath(file, options)),
-    ...grepArgs(options.tests),
-  ];
+  const args = buildRunArgs(options);
 
   const result = spawnSync(process.execPath, [cli, ...args, ...(options.extraArgs ?? [])], {
     cwd: options.cwd,
@@ -156,6 +151,18 @@ export function runTests(options: RunOptions): number {
     throw new PlaywrightNotFoundError(`Playwright could not be started: ${result.error.message}`);
   }
   return result.status ?? 1;
+}
+
+/**
+ * The arguments that express a selection to `playwright test`.
+ *
+ * Kept separate from spawning so it can be tested directly. This is where an error would be
+ * most expensive and least visible: getting it wrong does not crash, it quietly runs the wrong
+ * tests and reports success.
+ */
+export function buildRunArgs(options: RunOptions): string[] {
+  const files = [...new Set(options.tests.map((test) => test.file))];
+  return ['test', ...files.map((file) => toCliPath(file, options)), ...grepArgs(options.tests)];
 }
 
 /**

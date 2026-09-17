@@ -7,8 +7,10 @@ import { estimateSkippedDuration, predict, selectTests } from '../model/predict.
 import { estimateSavings } from '../metrics/carbon.js';
 import { formatCarbon, formatDuration, formatEnergy } from '../metrics/format.js';
 import { resolveDataDir } from './data-dir.js';
+import { InvalidConfigError, resolveConfig } from '../user-config.js';
 import { readRecords } from '../storage/jsonl.js';
 import { InvalidModelError, readModel } from '../storage/model.js';
+import type { SustainabilityConfig } from '../types.js';
 import {
   PlaywrightNotFoundError,
   grepWasDropped,
@@ -21,10 +23,14 @@ import {
 export interface RunOptions {
   /** Directory holding the model and the history file, if given explicitly. */
   dir?: string;
-  /** Fraction of the suite to run, between 0 and 1. */
-  ratio: number;
-  /** Floor on the number of selected tests, whatever the ratio works out to. */
-  minTests: number;
+  /** Fraction of the suite to run, between 0 and 1. Falls back to the config file. */
+  ratio?: number;
+  /** Floor on the number of selected tests. Falls back to the config file. */
+  minTests?: number;
+  /** Average power draw of this runner, in watts. Falls back to the config file. */
+  watts?: number;
+  /** Carbon intensity of the electricity, in gCO2eq per kWh. Falls back to the config file. */
+  gridIntensity?: number;
   /** Git revision range used to decide which files changed. */
   diff: string;
   /** Select and print the tests without handing them to Playwright. */
@@ -47,15 +53,23 @@ export function registerRunCommand(program: Command): void {
     )
     .option(
       '-r, --ratio <n>',
-      'fraction of the suite to run, between 0 and 1',
+      `fraction of the suite to run, between 0 and 1 (default: ${DEFAULT_CONFIG.selectionRatio})`,
       (value: string) => Number.parseFloat(value),
-      DEFAULT_CONFIG.selectionRatio,
     )
     .option(
       '--min-tests <n>',
-      'never select fewer tests than this',
+      `never select fewer tests than this (default: ${DEFAULT_CONFIG.minTests})`,
       (value: string) => Number.parseInt(value, 10),
-      DEFAULT_CONFIG.minTests,
+    )
+    .option(
+      '--watts <n>',
+      `average power draw of this runner, in watts (default: ${DEFAULT_CONFIG.sustainability.runnerWatts})`,
+      (value: string) => Number.parseFloat(value),
+    )
+    .option(
+      '--grid-intensity <n>',
+      `carbon intensity of your electricity, in gCO2eq per kWh (default: ${DEFAULT_CONFIG.sustainability.gridIntensity})`,
+      (value: string) => Number.parseFloat(value),
     )
     .option('--diff <range>', 'git revision range to compare against', 'HEAD~1..HEAD')
     .option('--dry-run', 'print the selection without running Playwright')
@@ -80,6 +94,19 @@ export async function run(options: RunOptions): Promise<void> {
     return;
   }
   const repoRoot = getRepositoryRoot({ cwd }) || cwd;
+
+  let config;
+  try {
+    config = resolveConfig(repoRoot, {
+      selectionRatio: options.ratio,
+      minTests: options.minTests,
+      runnerWatts: options.watts,
+      gridIntensity: options.gridIntensity,
+    });
+  } catch (error) {
+    fail(error instanceof InvalidConfigError ? error.message : String(error));
+    return;
+  }
 
   const dir = resolveDataDir(options.dir, repoRoot);
   const model = loadModel(join(dir, MODEL_FILE));
@@ -106,8 +133,8 @@ export async function run(options: RunOptions): Promise<void> {
 
   const predictions = predict(model, index, discovered, changedFiles);
   const selection = selectTests(predictions, index, {
-    ratio: options.ratio,
-    minTests: options.minTests,
+    ratio: config.selectionRatio,
+    minTests: config.minTests,
   });
 
   const byId = new Map(discovered.map((test) => [test.testId, test]));
@@ -129,7 +156,7 @@ export async function run(options: RunOptions): Promise<void> {
     extraArgs: options.playwrightArgs,
   });
 
-  reportSavings(index, selection.skipped);
+  reportSavings(index, selection.skipped, config.sustainability);
   process.exitCode = exitCode;
 }
 
@@ -188,7 +215,11 @@ function describeSelection(
  * assumptions, and it is labelled as one. Overstating this would be the easiest and cheapest
  * lie this project could tell, which is reason enough to be careful with it.
  */
-function reportSavings(index: ReturnType<typeof buildIndex>, skipped: string[]): void {
+function reportSavings(
+  index: ReturnType<typeof buildIndex>,
+  skipped: string[],
+  sustainability: SustainabilityConfig,
+): void {
   if (skipped.length === 0) {
     return;
   }
@@ -198,14 +229,15 @@ function reportSavings(index: ReturnType<typeof buildIndex>, skipped: string[]):
     return;
   }
 
-  const saved = estimateSavings(durationMs);
+  const saved = estimateSavings(durationMs, sustainability);
   process.stdout.write(
     [
       '',
       `Skipped ${skipped.length} test(s), historically ${formatDuration(durationMs)} of machine time.`,
       `Estimated saving: ${formatEnergy(saved.kWh)}, ${formatCarbon(saved.gCo2eq)}.`,
-      'Estimates, from your own history and the documented default assumptions about runner',
-      'power draw and grid carbon intensity. Not measurements.',
+      `Estimates, from your own history at ${sustainability.runnerWatts}W and ` +
+        `${sustainability.gridIntensity} gCO2eq/kWh. Not measurements; set them for your own`,
+      'hardware and grid in hunch.config.json.',
       '',
     ].join('\n'),
   );

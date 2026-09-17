@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { Command } from 'commander';
 import { registerTrainCommand } from './train.js';
 import { registerRunCommand } from './run.js';
+import { registerStatsCommand } from './stats.js';
 
 const require = createRequire(import.meta.url);
 
@@ -32,6 +33,7 @@ export function buildProgram(): Command {
 
   registerTrainCommand(program);
   registerRunCommand(program);
+  registerStatsCommand(program);
 
   return program;
 }

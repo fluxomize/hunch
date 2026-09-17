@@ -1,7 +1,9 @@
 import { join } from 'node:path';
 import type { Command } from 'commander';
 import { DEFAULT_CONFIG, HISTORY_FILE, MODEL_FILE } from '../config.js';
+import { getRepositoryRoot } from '../git/index.js';
 import { resolveDataDir } from './data-dir.js';
+import { InvalidConfigError, resolveConfig } from '../user-config.js';
 import { buildTrainingSet, groupIntoRuns } from '../model/features.js';
 import { NotEnoughSignalError, trainModel } from '../model/train.js';
 import { readRecords } from '../storage/jsonl.js';
@@ -12,8 +14,8 @@ import type { HunchModel } from '../types.js';
 export interface TrainOptions {
   /** Directory holding the history file and receiving the model, if given explicitly. */
   dir?: string;
-  /** Refuse to train with fewer historical runs than this. */
-  minRuns: number;
+  /** Refuse to train with fewer historical runs than this. Falls back to the config file. */
+  minRuns?: number;
 }
 
 /** Wires `hunch train` into the CLI. */
@@ -27,9 +29,8 @@ export function registerTrainCommand(program: Command): void {
     )
     .option(
       '--min-runs <n>',
-      'minimum number of historical runs required to train',
+      `minimum number of historical runs required to train (default: ${DEFAULT_CONFIG.minRunsToTrain})`,
       (value: string) => Number.parseInt(value, 10),
-      DEFAULT_CONFIG.minRunsToTrain,
     )
     .action(train);
 }
@@ -43,6 +44,20 @@ export function registerTrainCommand(program: Command): void {
  */
 export async function train(options: TrainOptions): Promise<void> {
   const dir = resolveDataDir(options.dir);
+
+  // The config file lives at the top of the working tree, wherever the data directory was
+  // pointed. Deriving it from the data directory would be wrong the moment somebody passes an
+  // explicit --dir somewhere else.
+  const repoRoot = getRepositoryRoot({ cwd: process.cwd() }) || process.cwd();
+
+  let minRuns: number;
+  try {
+    minRuns = resolveConfig(repoRoot, { minRunsToTrain: options.minRuns }).minRunsToTrain;
+  } catch (error) {
+    fail(error instanceof InvalidConfigError ? error.message : String(error));
+    return;
+  }
+
   const historyPath = join(dir, HISTORY_FILE);
   const modelPath = join(dir, MODEL_FILE);
 
@@ -57,9 +72,9 @@ export async function train(options: TrainOptions): Promise<void> {
   }
 
   const runs = groupIntoRuns(records).length;
-  if (runs < options.minRuns) {
+  if (runs < minRuns) {
     fail(
-      `Only ${runs} run(s) of history, and training needs at least ${options.minRuns}.`,
+      `Only ${runs} run(s) of history, and training needs at least ${minRuns}.`,
       'A model trained on less than that would mostly be repeating noise back at you.',
       'Keep running your suite; the reporter is already collecting.',
     );

@@ -1,0 +1,71 @@
+# Collecting history on your main branch.
+#
+# Hunch learns from what actually happened, so something has to run the whole suite and record
+# the result. That is this workflow: on every push to main it runs everything, retrains, and
+# commits the updated history and model back to the repository.
+#
+# Copy this to .github/workflows/hunch-collect.yml
+
+name: Tests and Hunch history
+
+on:
+  push:
+    branches: [main]
+
+# Needed to push the updated history back. If you would rather not have a workflow commit to
+# your repository, see the cache alternative at the bottom of this file.
+permissions:
+  contents: write
+
+concurrency:
+  # History is appended to, so two of these running at once would race on the same file.
+  group: hunch-history
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Hunch diffs against the previous commit. A shallow clone has no previous commit,
+          # and every run would record an empty change set, which teaches the model nothing.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps
+
+      # The whole suite, because this is the run that produces the training data.
+      - name: Run every test
+        run: npx playwright test
+
+      - name: Train
+        run: npx hunch train
+        # Training refuses until there is enough history, which is expected for the first few
+        # weeks. That is not a reason to fail the build.
+        continue-on-error: true
+
+      - name: Commit the history and model
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .hunch
+          git diff --staged --quiet || git commit -m "chore: update hunch history [skip ci]"
+          git push
+
+# Prefer not to commit from CI? Replace the commit step with a cache, before `npm ci`:
+#
+#   - uses: actions/cache@v4
+#     with:
+#       path: .hunch
+#       key: hunch-history-${{ github.run_id }}
+#       restore-keys: hunch-history-
+#
+# The trade-off is that GitHub evicts caches after 7 days of disuse and caps them by size, so a
+# quiet repository can lose its history. Committing the file keeps it for good, and makes it
+# reviewable in a pull request like anything else.

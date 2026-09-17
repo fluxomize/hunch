@@ -56,48 +56,50 @@ describe('hunch CLI', () => {
     const names = buildProgram()
       .commands.map((command) => command.name())
       .sort();
-    expect(names).toEqual(['run', 'train']);
+    expect(names).toEqual(['run', 'stats', 'train']);
   });
 
   it('reports the package version', () => {
     expect(buildProgram().version()).toMatch(/^\d+\.\d+\.\d+/);
   });
 
-  /**
-   * Reads the declared defaults without running the command.
-   *
-   * `train` now reads history and writes a model, so parsing it just to inspect its options
-   * would let a unit test touch the repository's own `.hunch` directory.
-   */
-  const declaredDefaults = (commandName: string): Record<string, unknown> => {
+  /** The help text for one option of one command. */
+  const describeOption = (commandName: string, attribute: string): string => {
     const command = buildProgram().commands.find((each) => each.name() === commandName);
-    const defaults: Record<string, unknown> = {};
-    for (const option of command?.options ?? []) {
-      defaults[option.attributeName()] = option.defaultValue;
-    }
-    return defaults;
+    return (
+      command?.options.find((option) => option.attributeName() === attribute)?.description ?? ''
+    );
   };
 
-  it('applies the documented defaults to train', () => {
-    expect(declaredDefaults('train')).toMatchObject({
-      minRuns: DEFAULT_CONFIG.minRunsToTrain,
-    });
+  /**
+   * Every setting that `hunch.config.json` can supply has no commander default, because a
+   * default here would always beat the file. The help text has to carry what the option object
+   * therefore cannot, or `--help` would show no default at all.
+   */
+  it.each([
+    ['run', 'ratio', String(DEFAULT_CONFIG.selectionRatio)],
+    ['run', 'minTests', String(DEFAULT_CONFIG.minTests)],
+    ['run', 'watts', String(DEFAULT_CONFIG.sustainability.runnerWatts)],
+    ['run', 'gridIntensity', String(DEFAULT_CONFIG.sustainability.gridIntensity)],
+    ['train', 'minRuns', String(DEFAULT_CONFIG.minRunsToTrain)],
+  ])('documents the default for %s --%s in its help text', (command, attribute, expected) => {
+    expect(describeOption(command, attribute)).toContain(expected);
+    const option = buildProgram()
+      .commands.find((each) => each.name() === command)
+      ?.options.find((each) => each.attributeName() === attribute);
+    expect(option?.defaultValue).toBeUndefined();
   });
 
-  it('applies the documented defaults to run', () => {
-    expect(declaredDefaults('run')).toMatchObject({
-      ratio: DEFAULT_CONFIG.selectionRatio,
-      minTests: DEFAULT_CONFIG.minTests,
-      diff: 'HEAD~1..HEAD',
-    });
+  it('keeps a commander default for settings the config file does not cover', () => {
+    const run = buildProgram().commands.find((each) => each.name() === 'run');
+    const diff = run?.options.find((option) => option.attributeName() === 'diff');
+    expect(diff?.defaultValue).toBe('HEAD~1..HEAD');
   });
 
   it('describes where its data lives by default, since there is no literal default', () => {
     // The directory is resolved against the repository root at run time, so the help text has
     // to carry what the option object cannot.
-    const run = buildProgram().commands.find((each) => each.name() === 'run');
-    const dir = run?.options.find((option) => option.attributeName() === 'dir');
-    expect(dir?.description).toContain('repository root');
+    expect(describeOption('run', 'dir')).toContain('repository root');
   });
 
   it('parses its own flags on run', async () => {
