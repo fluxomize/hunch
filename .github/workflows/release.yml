@@ -53,6 +53,18 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # Publishing over OIDC fails with a bare 404 when either side is misconfigured, which
+      # is impossible to read. This separates the two sides before we get there: if the job
+      # has no id-token the fault is here, and if it does, a later 404 is the npm side.
+      - name: Check the publishing environment
+        run: |
+          echo "npm $(npm --version) on node $(node --version)"
+          if [ -z "$ACTIONS_ID_TOKEN_REQUEST_URL" ]; then
+            echo "No OIDC id-token in this job. The workflow is missing id-token: write." >&2
+            exit 1
+          fi
+          echo "OIDC id-token is available to this job."
+
       # We install with pnpm but publish with npm, because trusted publishing and provenance
       # are implemented in the npm CLI and this is the path npm supports directly.
       #
