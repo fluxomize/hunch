@@ -70,9 +70,11 @@ describe('git helpers', () => {
     const nested = join(repo, 'deep', 'nested');
     mkdirSync(nested, { recursive: true });
 
-    // git prints the path with forward slashes and resolves symlinks, which matters because
-    // the system temp directory is a symlink on macOS.
-    const normalise = (path: string): string => realpathSync(path).split('\\').join('/');
+    // Both sides are canonicalised before comparing, because the same directory has more than
+    // one true name: the temp directory is a symlink on macOS, and on the Windows CI runner it
+    // arrives as an 8.3 short name like RUNNER~1 while git reports the long one. Only
+    // `realpathSync.native` expands a short name, and it resolves symlinks too.
+    const normalise = (path: string): string => realpathSync.native(path).split('\\').join('/');
     const expected = normalise(repo);
 
     expect(normalise(getRepositoryRoot({ cwd: repo }))).toBe(expected);
