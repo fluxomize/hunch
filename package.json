@@ -1,6 +1,6 @@
 {
   "name": "@fluxomize/hunch",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "Playwright's smart hunch about which tests to run. Predictive test selection with ML to cut CI time and carbon footprint.",
   "keywords": [
     "playwright",
@@ -46,7 +46,7 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "hunch": "./dist/cli/index.js"
+    "hunch": "dist/cli/index.js"
   },
   "files": [
     "dist",
