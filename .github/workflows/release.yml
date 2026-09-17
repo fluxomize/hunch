@@ -5,9 +5,13 @@ on:
     tags:
       - 'v*'
 
+# Publishing authenticates with npm over OIDC (trusted publishing), configured against this
+# repository and this workflow filename in the package settings on npmjs.com. NPM_TOKEN is
+# kept as a fallback until an OIDC publish has been seen to work, then it can be revoked.
 permissions:
   contents: write
-  # Required for npm provenance, which links the published tarball back to this workflow run.
+  # Required both for OIDC authentication and for provenance, which links the published
+  # tarball back to this workflow run.
   id-token: write
 
 jobs:
@@ -24,7 +28,8 @@ jobs:
           # Node 24 ships npm 11, which is what trusted publishing needs. The package itself
           # still supports Node 20; this is only the machine doing the publishing.
           node-version: 24
-          cache: pnpm
+          # No dependency cache in a release build: what gets published should come from a
+          # clean resolve of the lockfile, not from whatever a previous run left behind.
           registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
